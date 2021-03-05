@@ -1,7 +1,7 @@
 //! Implementation details of the nRF HAL crates. Don't use this directly, use one of the specific
 //! HAL crates instead (`nrfXYZ-hal`).
 
-#![doc(html_root_url = "https://docs.rs/nrf-hal-common/0.12.0")]
+#![doc(html_root_url = "https://docs.rs/nrf-hal-common/0.12.1")]
 #![no_std]
 
 use embedded_hal as hal;
@@ -43,6 +43,8 @@ pub mod gpio;
 pub mod gpiote;
 #[cfg(not(any(feature = "51", feature = "52810", feature = "52811")))]
 pub mod i2s;
+#[cfg(any(feature = "52833", feature = "52840"))]
+pub mod ieee802154;
 #[cfg(not(any(feature = "52811", feature = "52810", feature = "9160")))]
 pub mod lpcomp;
 #[cfg(not(feature = "9160"))]

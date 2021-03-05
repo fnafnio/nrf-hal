@@ -156,6 +156,10 @@ impl<'a> Channel<'a> {
 
         while self.saadc.events_end.read().bits() == 0 {}
         self.saadc.events_end.reset();
+        // Calibrate
+        saadc.events_calibratedone.reset();
+        saadc.tasks_calibrateoffset.write(|w| unsafe { w.bits(1) });
+        while saadc.events_calibratedone.read().bits() == 0 {}
 
         // Will only occur if more than one channel has been enabled.
         if self.saadc.result.amount.read().bits() != 1 {
@@ -330,7 +334,9 @@ where
             6 => self.saadc.ch[0].pselp.write(|w| w.pselp().analog_input6()),
             7 => self.saadc.ch[0].pselp.write(|w| w.pselp().analog_input7()),
             #[cfg(not(feature = "9160"))]
-            8 => self.saadc.ch[0].pselp.write(|w| w.pselp().vdd()),
+            8 => self.0.ch[0].pselp.write(|w| w.pselp().vdd()),
+            #[cfg(any(feature = "52833", feature = "52840"))]
+            13 => self.0.ch[0].pselp.write(|w| w.pselp().vddhdiv5()),
             // This can never happen the only analog pins have already been defined
             // PAY CLOSE ATTENTION TO ANY CHANGES TO THIS IMPL OR THE `channel_mappings!` MACRO
             _ => unsafe { unreachable_unchecked() },
@@ -447,3 +453,15 @@ psel_mappings! {
     ANALOGINPUT6 => P0_30,
     ANALOGINPUT7 => P0_31,
 }
+#[cfg(any(feature = "52833", feature = "52840"))]
+impl Channel<Saadc> for InternalVddHdiv5 {
+    type ID = u8;
+
+    fn channel() -> <Self as embedded_hal::adc::Channel<Saadc>>::ID {
+        13
+    }
+}
+
+#[cfg(any(feature = "52833", feature = "52840"))]
+/// The voltage on the VDDH pin, divided by 5.
+pub struct InternalVddHdiv5;
