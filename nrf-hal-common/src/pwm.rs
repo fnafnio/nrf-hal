@@ -269,8 +269,8 @@ where
         let val = T::buffer().get()[index];
         let is_inverted = (val >> 15) & 1 == 0;
         match is_inverted {
-            false => self.max_duty() - val,
-            true => val & 0x7FFF,
+            false => val & 0x7FFF,
+            true => self.max_duty() - val,
         }
     }
 

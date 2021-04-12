@@ -1,0 +1,10 @@
+{
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#3F0C78",
+        "titleBar.activeBackground": "#5811A8",
+        "titleBar.activeForeground": "#FDFBFF"
+    },
+    "rust-analyzer.checkOnSave.features": ["52840"],
+    "rust-analyzer.checkOnSave.target": "thumbv7em-none-eabihf",
+    // "rust-analyzer.cargo.features": ["52840"],
+}
