@@ -382,18 +382,20 @@ where
         self.0
     }
 
-    pub fn free_with_pins(self) -> (T, Pins){
+    pub fn free_with_pins(self) -> (T, Pins) {
         self.0.psel.scl.write(|w| w.connect().clear_bit());
         self.0.psel.sda.write(|w| w.connect().clear_bit());
 
-        let scl_pin = self.0.psel.scl.read.bits();
-        let sda_pin = self.0.psel.sda.read.bits();
+        let scl_pin = self.0.psel.scl.read().bits();
+        let sda_pin = self.0.psel.sda.read().bits();
 
-        (self.0, Pins {
-            sda: unsafe{Pin::from_psel_bits(sda_pin),
-            scl: Pin::from_psel_bits(scl_pin),
-            }
-        })
+        (
+            self.0,
+            Pins {
+                sda: unsafe { Pin::from_psel_bits(sda_pin) },
+                scl: unsafe { Pin::from_psel_bits(scl_pin) },
+            },
+        )
     }
 }
 
