@@ -381,6 +381,20 @@ where
     pub fn free(self) -> T {
         self.0
     }
+
+    pub fn free_with_pins(self) -> (T, Pins){
+        self.0.psel.scl.write(|w| w.connect().clear_bit());
+        self.0.psel.sda.write(|w| w.connect().clear_bit());
+
+        let scl_pin = self.0.psel.scl.read.bits();
+        let sda_pin = self.0.psel.sda.read.bits();
+
+        (self.0, Pins {
+            sda: unsafe{Pin::from_psel_bits(sda_pin),
+            scl: Pin::from_psel_bits(scl_pin),
+            }
+        })
+    }
 }
 
 impl<T> embedded_hal::blocking::i2c::Write for Twim<T>
