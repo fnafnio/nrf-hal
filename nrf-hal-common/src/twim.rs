@@ -383,19 +383,17 @@ where
     }
 
     pub fn free_with_pins(self) -> (T, Pins) {
-        self.0.psel.scl.write(|w| w.connect().clear_bit());
-        self.0.psel.sda.write(|w| w.connect().clear_bit());
+        let scl_pin = (self.0.psel.scl.read().bits() & 0b111111) as _;
+        let sda_pin = (self.0.psel.sda.read().bits() & 0b111111) as _;
 
-        let scl_pin = self.0.psel.scl.read().bits();
-        let sda_pin = self.0.psel.sda.read().bits();
+        // disconnecting the pin resets the register -> disconnecting before reading PSEL lo
+        self.0.psel.scl.write(|w| w.connect().disconnected());
+        self.0.psel.sda.write(|w| w.connect().disconnected());
 
-        (
-            self.0,
-            Pins {
-                sda: unsafe { Pin::from_psel_bits(sda_pin) },
-                scl: unsafe { Pin::from_psel_bits(scl_pin) },
-            },
-        )
+        let sda = unsafe { Pin::from_psel_bits(sda_pin) };
+        let scl = unsafe { Pin::from_psel_bits(scl_pin) };
+
+        (self.0, Pins { sda, scl })
     }
 }
 

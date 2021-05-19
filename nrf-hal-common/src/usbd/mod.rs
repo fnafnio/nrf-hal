@@ -12,7 +12,7 @@ use crate::{
     clocks::{Clocks, ExternalOscillator},
     pac::USBD,
 };
-use core::sync::atomic::{compiler_fence, Ordering};
+use core::{marker::PhantomData, sync::atomic::{compiler_fence, Ordering}};
 use core::cell::Cell;
 use core::mem::MaybeUninit;
 use cortex_m::interrupt::{self, Mutex};
@@ -75,7 +75,8 @@ pub struct Usbd<'c> {
     busy_in_endpoints: Mutex<Cell<u16>>,
 
     // used to freeze `Clocks` and ensure they remain in the `ExternalOscillator` state
-    _clocks: &'c (),
+    // _clocks: &'c (),
+    _marker: PhantomData<&'c ()>
 }
 
 impl<'c> Usbd<'c> {
@@ -85,9 +86,9 @@ impl<'c> Usbd<'c> {
     ///
     /// * `periph`: The raw USBD peripheral.
     #[inline]
-    pub fn new<L, LSTAT>(
+    pub fn new(
         periph: USBD,
-        _clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
+        // _clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
     ) -> UsbBusAllocator<Self> {
         UsbBusAllocator::new(Self {
             periph: Mutex::new(periph),
@@ -104,7 +105,8 @@ impl<'c> Usbd<'c> {
                 is_set_address: false,
             })),
             busy_in_endpoints: Mutex::new(Cell::new(0)),
-            _clocks: &(),
+            // _clocks: &(),
+            _marker: PhantomData
         })
     }
 
