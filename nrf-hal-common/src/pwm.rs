@@ -2,16 +2,16 @@
 //!
 //! The pulse with modulation (PWM) module enables the generation of pulse width modulated signals on GPIO.
 
-#[cfg(not(any(feature = "52810", feature = "52811")))]
-use crate::{
-    pac::PWM3,
-    pac::{PWM1, PWM2},
-};
 use crate::{
     gpio::{Output, Pin, PushPull},
     pac::{generic::Reg, pwm0::*, Interrupt, PWM0},
     target_constants::{SRAM_LOWER, SRAM_UPPER},
     time::*,
+};
+#[cfg(not(any(feature = "52810", feature = "52811")))]
+use crate::{
+    pac::PWM3,
+    pac::{PWM1, PWM2},
 };
 use core::{
     cell::Cell,
@@ -372,9 +372,12 @@ where
         T::buffer().set(buffer);
         self.one_shot();
         self.set_load_mode(LoadMode::Individual);
-        self.pwm.seq0.ptr.write(|w| unsafe { w.bits(T::buffer().as_ptr() as u32) });
+        self.pwm
+            .seq0
+            .ptr
+            .write(|w| unsafe { w.bits(T::buffer().as_ptr() as u32) });
         self.pwm.seq0.cnt.write(|w| unsafe { w.bits(4) });
-        self.start_seq(Seq::Seq0); 
+        self.start_seq(Seq::Seq0);
     }
 
     /// Sets inverted duty cycle (15 bit) for a PWM channel.
@@ -385,9 +388,12 @@ where
         T::buffer().set(buffer);
         self.one_shot();
         self.set_load_mode(LoadMode::Individual);
-        self.pwm.seq0.ptr.write(|w| unsafe { w.bits(T::buffer().as_ptr() as u32) });
+        self.pwm
+            .seq0
+            .ptr
+            .write(|w| unsafe { w.bits(T::buffer().as_ptr() as u32) });
         self.pwm.seq0.cnt.write(|w| unsafe { w.bits(4) });
-        self.start_seq(Seq::Seq0); 
+        self.start_seq(Seq::Seq0);
     }
 
     /// Returns the duty cycle value for a PWM channel.        
@@ -1078,7 +1084,7 @@ impl Instance for PWM0 {
     const INTERRUPT: Interrupt = Interrupt::PWM0;
     #[inline(always)]
     fn buffer() -> &'static Cell<[u16; 4]> {
-         unsafe { &BUF0 }
+        unsafe { &BUF0 }
     }
 }
 
@@ -1086,7 +1092,7 @@ impl Instance for PWM0 {
 impl Instance for PWM1 {
     const INTERRUPT: Interrupt = Interrupt::PWM1;
     fn buffer() -> &'static Cell<[u16; 4]> {
-         unsafe { &BUF1 }
+        unsafe { &BUF1 }
     }
 }
 
@@ -1094,7 +1100,7 @@ impl Instance for PWM1 {
 impl Instance for PWM2 {
     const INTERRUPT: Interrupt = Interrupt::PWM2;
     fn buffer() -> &'static Cell<[u16; 4]> {
-        unsafe { &BUF2 } 
+        unsafe { &BUF2 }
     }
 }
 
@@ -1102,7 +1108,7 @@ impl Instance for PWM2 {
 impl Instance for PWM3 {
     const INTERRUPT: Interrupt = Interrupt::PWM3;
     fn buffer() -> &'static Cell<[u16; 4]> {
-        unsafe { &BUF3 } 
+        unsafe { &BUF3 }
     }
 }
 
