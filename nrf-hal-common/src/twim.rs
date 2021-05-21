@@ -383,10 +383,11 @@ where
     }
 
     pub fn free_with_pins(self) -> (T, Pins) {
+        // get pin and port from psel
         let scl_pin = (self.0.psel.scl.read().bits() & 0b111111) as _;
         let sda_pin = (self.0.psel.sda.read().bits() & 0b111111) as _;
 
-        // disconnecting the pin resets the register -> disconnecting before reading PSEL lo
+        // disconnecting the pin resets the register -> reading PSEL before disconnecting, no reset needed afterwards
         self.0.psel.scl.write(|w| w.connect().disconnected());
         self.0.psel.sda.write(|w| w.connect().disconnected());
 
