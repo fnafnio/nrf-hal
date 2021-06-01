@@ -2,9 +2,13 @@
 //!
 //! The pulse with modulation (PWM) module enables the generation of pulse width modulated signals on GPIO.
 
+#[cfg(not(any(feature = "9160")))]
+use crate::pac::pwm0::*;
+#[cfg(any(feature = "9160"))]
+use crate::pac::pwm0_ns::*;
 use crate::{
     gpio::{Output, Pin, PushPull},
-    pac::{generic::Reg, pwm0::*, Interrupt, PWM0},
+    pac::{generic::Reg, Interrupt},
     target_constants::{SRAM_LOWER, SRAM_UPPER},
     time::*,
 };
@@ -469,7 +473,7 @@ where
     pub fn start_seq(&self, seq: Seq) {
         compiler_fence(Ordering::SeqCst);
         self.pwm.enable.write(|w| w.enable().enabled());
-        self.pwm.tasks_seqstart[usize::from(seq)].write(|w| w.tasks_seqstart().set_bit());
+        self.pwm.tasks_seqstart[usize::from(seq)].write(|w| unsafe { w.bits(1) });
         while self.pwm.events_seqstarted[usize::from(seq)].read().bits() == 0 {}
         self.pwm.events_seqend[0].write(|w| w);
         self.pwm.events_seqend[1].write(|w| w);
@@ -479,16 +483,14 @@ where
     /// Does not cause PWM generation to start if not running.
     #[inline(always)]
     pub fn next_step(&self) {
-        self.pwm
-            .tasks_nextstep
-            .write(|w| w.tasks_nextstep().set_bit());
+        self.pwm.tasks_nextstep.write(|w| unsafe { w.bits(1) });
     }
 
     /// Stops PWM pulse generation on all channels at the end of current PWM period, and stops sequence playback.
     #[inline(always)]
     pub fn stop(&self) {
         compiler_fence(Ordering::SeqCst);
-        self.pwm.tasks_stop.write(|w| w.tasks_stop().set_bit());
+        self.pwm.tasks_stop.write(|w| unsafe { w.bits(1) });
         while self.pwm.events_stopped.read().bits() == 0 {}
     }
 
@@ -1064,7 +1066,7 @@ pub enum Error {
     BufferTooLong,
 }
 
-pub trait Instance: sealed::Sealed + Deref<Target = crate::pac::pwm0::RegisterBlock> {
+pub trait Instance: sealed::Sealed + Deref<Target = RegisterBlock> {
     const INTERRUPT: Interrupt;
 
     /// Provides access to the associated internal duty buffer for the instance.
@@ -1080,7 +1082,8 @@ static mut BUF2: Cell<[u16; 4]> = Cell::new([0; 4]);
 #[cfg(not(any(feature = "52810", feature = "52811", feature = "52832")))]
 static mut BUF3: Cell<[u16; 4]> = Cell::new([0; 4]);
 
-impl Instance for PWM0 {
+#[cfg(not(any(feature = "9160")))]
+impl Instance for crate::pac::PWM0 {
     const INTERRUPT: Interrupt = Interrupt::PWM0;
     #[inline(always)]
     fn buffer() -> &'static Cell<[u16; 4]> {
@@ -1088,40 +1091,96 @@ impl Instance for PWM0 {
     }
 }
 
-#[cfg(not(any(feature = "52810", feature = "52811")))]
-impl Instance for PWM1 {
+#[cfg(not(any(feature = "52810", feature = "52811", feature = "9160")))]
+impl Instance for crate::pac::PWM1 {
     const INTERRUPT: Interrupt = Interrupt::PWM1;
     fn buffer() -> &'static Cell<[u16; 4]> {
         unsafe { &BUF1 }
     }
 }
 
-#[cfg(not(any(feature = "52810", feature = "52811")))]
-impl Instance for PWM2 {
+#[cfg(not(any(feature = "52810", feature = "52811", feature = "9160")))]
+impl Instance for crate::pac::PWM2 {
     const INTERRUPT: Interrupt = Interrupt::PWM2;
     fn buffer() -> &'static Cell<[u16; 4]> {
         unsafe { &BUF2 }
     }
 }
 
-#[cfg(not(any(feature = "52810", feature = "52811", feature = "52832")))]
-impl Instance for PWM3 {
+#[cfg(not(any(
+    feature = "52810",
+    feature = "52811",
+    feature = "52832",
+    feature = "9160"
+)))]
+impl Instance for crate::pac::PWM3 {
     const INTERRUPT: Interrupt = Interrupt::PWM3;
     fn buffer() -> &'static Cell<[u16; 4]> {
         unsafe { &BUF3 }
     }
 }
 
+#[cfg(any(feature = "9160"))]
+impl Instance for crate::pac::PWM0_NS {
+    const INTERRUPT: Interrupt = Interrupt::PWM0;
+    #[inline(always)]
+    fn buffer() -> &'static Cell<[u16; 4]> {
+        unsafe { &BUF0 }
+    }
+}
+
+#[cfg(any(feature = "9160"))]
+impl Instance for crate::pac::PWM1_NS {
+    const INTERRUPT: Interrupt = Interrupt::PWM1;
+    fn buffer() -> &'static Cell<[u16; 4]> {
+        unsafe { &BUF1 }
+    }
+}
+
+#[cfg(any(feature = "9160"))]
+impl Instance for crate::pac::PWM2_NS {
+    const INTERRUPT: Interrupt = Interrupt::PWM2;
+    fn buffer() -> &'static Cell<[u16; 4]> {
+        unsafe { &BUF2 }
+    }
+}
+
+#[cfg(any(feature = "9160"))]
+impl Instance for crate::pac::PWM3_NS {
+    const INTERRUPT: Interrupt = Interrupt::PWM3;
+    fn buffer() -> &'static Cell<[u16; 4]> {
+        unsafe { &BUF3 }
+    }
+}
 mod sealed {
     pub trait Sealed {}
-    impl Sealed for crate::pwm::PWM0 {}
 
-    #[cfg(not(any(feature = "52810", feature = "52811")))]
-    impl Sealed for crate::pwm::PWM1 {}
+    #[cfg(not(any(feature = "9160")))]
+    impl Sealed for crate::pac::PWM0 {}
 
-    #[cfg(not(any(feature = "52810", feature = "52811")))]
-    impl Sealed for crate::pwm::PWM2 {}
+    #[cfg(not(any(feature = "52810", feature = "52811", feature = "9160")))]
+    impl Sealed for crate::pac::PWM1 {}
 
-    #[cfg(not(any(feature = "52810", feature = "52811", feature = "52832")))]
-    impl Sealed for crate::pwm::PWM3 {}
+    #[cfg(not(any(feature = "52810", feature = "52811", feature = "9160")))]
+    impl Sealed for crate::pac::PWM2 {}
+
+    #[cfg(not(any(
+        feature = "52810",
+        feature = "52811",
+        feature = "52832",
+        feature = "9160"
+    )))]
+    impl Sealed for crate::pac::PWM3 {}
+
+    #[cfg(any(feature = "9160"))]
+    impl Sealed for crate::pac::PWM0_NS {}
+
+    #[cfg(any(feature = "9160"))]
+    impl Sealed for crate::pac::PWM1_NS {}
+
+    #[cfg(any(feature = "9160"))]
+    impl Sealed for crate::pac::PWM2_NS {}
+
+    #[cfg(any(feature = "9160"))]
+    impl Sealed for crate::pac::PWM3_NS {}
 }
