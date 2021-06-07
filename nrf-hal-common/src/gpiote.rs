@@ -116,16 +116,6 @@ impl<'a> GpioteChannel<'_> {
         }
     }
 
-    pub fn get_input_pin<P: GpioteInputPin>(&'a self) -> GpioteChannelEvent<'a, P> {
-        let psel = self.gpiote.config[self.channel].read().read().psel();
-        let port = self.gpiote.config[self.channel].read().read().port();
-        GpioteChannelEvent {
-            gpiote: &self.gpiote,
-            pin,
-            channel: self.channel
-        }
-    }
-
     /// Checks if the channel event has been triggered.
     pub fn is_event_triggered(&self) -> bool {
         self.gpiote.events_in[self.channel].read().bits() != 0
@@ -233,20 +223,12 @@ impl<'a, P: GpioteInputPin> GpioteChannelEvent<'_, P> {
     }
     /// Enables GPIOTE interrupt for channel.
     pub fn enable_interrupt(&self) -> &Self {
-        unsafe {
-            self.gpiote
-                .intenset
-                .write(|w| w.bits(1 << self.channel))
-        }
+        unsafe { self.gpiote.intenset.write(|w| w.bits(1 << self.channel)) }
         self
     }
     /// Disables GPIOTE interrupt for channel.
     pub fn disable_interrupt(&self) -> &Self {
-        unsafe {
-            self.gpiote
-                .intenclr
-                .write(|w| w.bits(1 << self.channel))
-        }
+        unsafe { self.gpiote.intenclr.write(|w| w.bits(1 << self.channel)) }
         self
     }
 }
