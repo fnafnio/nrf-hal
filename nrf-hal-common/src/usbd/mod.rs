@@ -85,7 +85,7 @@ impl<'c> Usbd<'c> {
     ///
     /// * `periph`: The raw USBD peripheral.
     #[inline]
-    pub fn new<L, LSTAT>(
+    pub fn new<LSTAT>(
         periph: USBD,
         //_clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
     ) -> UsbBusAllocator<Self> {
