@@ -87,7 +87,7 @@ impl<'c> Usbd<'c> {
     #[inline]
     pub fn new<L, LSTAT>(
         periph: USBD,
-        _clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
+        //_clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
     ) -> UsbBusAllocator<Self> {
         UsbBusAllocator::new(Self {
             periph: Mutex::new(periph),
