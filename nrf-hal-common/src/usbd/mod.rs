@@ -12,7 +12,7 @@ use crate::{
     clocks::{Clocks, ExternalOscillator},
     pac::USBD,
 };
-use core::{marker::PhantomData, sync::atomic::{compiler_fence, Ordering}};
+use core::sync::atomic::{compiler_fence, Ordering};
 use core::cell::Cell;
 use core::mem::MaybeUninit;
 use cortex_m::interrupt::{self, Mutex};
@@ -75,8 +75,7 @@ pub struct Usbd<'c> {
     busy_in_endpoints: Mutex<Cell<u16>>,
 
     // used to freeze `Clocks` and ensure they remain in the `ExternalOscillator` state
-    // _clocks: &'c (),
-    _marker: PhantomData<&'c ()>
+    _clocks: &'c (),
 }
 
 impl<'c> Usbd<'c> {
@@ -86,9 +85,9 @@ impl<'c> Usbd<'c> {
     ///
     /// * `periph`: The raw USBD peripheral.
     #[inline]
-    pub fn new(
+    pub fn new<L, LSTAT>(
         periph: USBD,
-        // _clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
+        _clocks: &'c Clocks<ExternalOscillator, L, LSTAT>,
     ) -> UsbBusAllocator<Self> {
         UsbBusAllocator::new(Self {
             periph: Mutex::new(periph),
@@ -105,8 +104,7 @@ impl<'c> Usbd<'c> {
                 is_set_address: false,
             })),
             busy_in_endpoints: Mutex::new(Cell::new(0)),
-            // _clocks: &(),
-            _marker: PhantomData
+            _clocks: &(),
         })
     }
 
@@ -176,7 +174,7 @@ impl UsbBus for Usbd<'_> {
         ep_addr: Option<EndpointAddress>,
         ep_type: EndpointType,
         max_packet_size: u16,
-        interval: u8,
+        _interval: u8,
     ) -> usb_device::Result<EndpointAddress> {
         // Endpoint addresses are fixed in hardware:
         // - 0x80 / 0x00 - Control        EP0
@@ -194,17 +192,6 @@ impl UsbBus for Usbd<'_> {
         // store user-supplied value
         if ep_addr.map(|addr| addr.index()) == Some(0) {
             self.max_packet_size_0 = max_packet_size;
-        }
-
-        if false {
-            unimplemented!(
-                "alloc_ep({:?}, {:?}, {:?}, {}, {})",
-                ep_dir,
-                ep_addr,
-                ep_type,
-                max_packet_size,
-                interval,
-            );
         }
 
         let (used, lens) = match ep_dir {
@@ -370,7 +357,17 @@ impl UsbBus for Usbd<'_> {
             let busy_in_endpoints = self.busy_in_endpoints.borrow(cs);
 
             if busy_in_endpoints.get() & (1 << i) != 0 {
-                return Err(UsbError::WouldBlock);
+                // Maybe this endpoint is not busy?
+                let epdatastatus = regs.epdatastatus.read().bits();
+                if epdatastatus & (1 << i) != 0 {
+                    // Clear the event flag
+                    regs.epdatastatus.write(|w| unsafe { w.bits(1 << i) });
+
+                    // Clear the busy status and continue
+                    busy_in_endpoints.set(busy_in_endpoints.get() & !(1 << i));
+                } else {
+                    return Err(UsbError::WouldBlock);
+                }
             }
             if regs.epstatus.read().bits() & (1 << i) != 0 {
                 return Err(UsbError::WouldBlock);
@@ -532,9 +529,6 @@ impl UsbBus for Usbd<'_> {
 
             // TODO: ISO
 
-            // Read is complete, clear status flag
-            regs.epdatastatus.write(|w| unsafe { w.bits(1 << (i + 16)) });
-
             // Enable the endpoint
             regs.size.epout[i].reset();
 
@@ -569,7 +563,15 @@ impl UsbBus for Usbd<'_> {
     }
 
     fn is_stalled(&self, ep_addr: EndpointAddress) -> bool {
-        unimplemented!("is_stalled(ep={:?})", ep_addr);
+        interrupt::free(|cs| {
+            let regs = self.periph.borrow(cs);
+
+            let i = ep_addr.index();
+            match ep_addr.direction() {
+                UsbDirection::Out => regs.halted.epout[i].read().getstatus().is_halted(),
+                UsbDirection::In => regs.halted.epin[i].read().getstatus().is_halted(),
+            }
+        })
     }
 
     #[inline]
