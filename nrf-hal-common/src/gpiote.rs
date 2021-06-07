@@ -116,6 +116,16 @@ impl<'a> GpioteChannel<'_> {
         }
     }
 
+    pub fn get_input_pin<P: GpioteInputPin>(&'a self) -> GpioteChannelEvent<'a, P> {
+        let psel = self.gpiote.config[self.channel].read().read().psel();
+        let port = self.gpiote.config[self.channel].read().read().port();
+        GpioteChannelEvent {
+            gpiote: &self.gpiote,
+            pin,
+            channel: self.channel
+        }
+    }
+
     /// Checks if the channel event has been triggered.
     pub fn is_event_triggered(&self) -> bool {
         self.gpiote.events_in[self.channel].read().bits() != 0
